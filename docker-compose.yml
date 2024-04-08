@@ -1,0 +1,49 @@
+version: "3"
+
+services:
+    app:
+        container_name: app
+        entrypoint: wait-for db:3306 -t 40 -- ./start.sh
+        volumes:
+          - ./node:/usr/src/app
+          - /usr/src/app/node_modules
+        build:
+          context: ./node
+        ports:
+          - "3000:3000"
+        networks:
+          - desafio-docker-network
+        depends_on:
+          - db
+
+    nginx:
+        container_name: proxy-nginx
+        restart: always
+        build:
+          context: ./nginx
+        ports:
+          - "8080:80"
+        networks:
+          - desafio-docker-network
+        depends_on:
+          - app
+
+    db:
+      image: mysql:5.7.16
+      command: --innodb-use-native-aio=0
+      container_name: db
+      restart: always
+      tty: true
+      volumes:
+        - ./mysql:/var/lib/mysql
+        - "./scripts/pessoa.sql:/docker-entrypoint-initdb.d/1.sql"
+      environment:
+        - MYSQL_DATABASE=desafiofcdockerdb
+        - MYSQL_ROOT_PASSWORD=root
+        - MYSQL_ROOT_USER=root
+      networks:
+        - desafio-docker-network
+  
+networks: 
+  desafio-docker-network:
+    driver: bridge
